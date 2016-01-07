@@ -1,6 +1,6 @@
-The Unofficial App of the Brotherhood of the Aleph Zadik Aleph.
+The Unofficial App of the Sisterhood of the Bnai Brith Girls.
 ================
 
-The latest release is downloadable from the [Play Store.](https://play.google.com/store/apps/details?id=org.ramonaza.unofficialazaapp)
+Play Store coming soon.
 
 For more information, please see the [wiki.](https://github.com/ischeinkman/UnofficialAZAApp/wiki)

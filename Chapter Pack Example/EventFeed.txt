@@ -1,1 +1,1 @@
-https://raw.githubusercontent.com/ischeinkman/UnofficialAZAApp/master/EventFeedExample
+https://raw.githubusercontent.com/ischeinkman/UnofficialBBGApp/master/EventFeedExample
