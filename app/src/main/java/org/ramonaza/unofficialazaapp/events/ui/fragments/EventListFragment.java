@@ -6,12 +6,15 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
+import org.ramonaza.unofficialazaapp.events.backend.services.EventUpdateService;
 import org.ramonaza.unofficialazaapp.events.ui.activities.EventPageActivity;
-import org.ramonaza.unofficialazaapp.helpers.backend.EventNotificationService;
+import org.ramonaza.unofficialazaapp.helpers.backend.PreferenceHelper;
 import org.ramonaza.unofficialazaapp.helpers.ui.fragments.InfoWrapperListFragStyles.InfoWrapperTextListFragment;
 import org.ramonaza.unofficialazaapp.people.backend.EventDatabaseHandler;
 import org.ramonazaapi.events.EventInfoWrapper;
@@ -32,12 +35,12 @@ public class EventListFragment extends InfoWrapperTextListFragment {
     private static final String ARG_SECTION_NUMBER = "section_number";
 
     private EventDatabaseHandler handler;
-    private EventNotificationService updateService;
+    private EventUpdateService updateService;
     private boolean serviceBound;
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            updateService = ((EventNotificationService.MyBinder) iBinder).getService();
+            updateService = ((EventUpdateService.MyBinder) iBinder).getService();
             serviceBound = true;
         }
 
@@ -58,17 +61,17 @@ public class EventListFragment extends InfoWrapperTextListFragment {
     @Override
     public void onResume() {
         super.onResume();
-        Intent intent = new Intent(getActivity(), EventNotificationService.class);
+        Intent intent = new Intent(getActivity(), EventUpdateService.class);
         getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     public void onPause() {
-        super.onPause();
         if (serviceBound) {
             getActivity().unbindService(mConnection);
         }
         serviceBound = false;
+        super.onPause();
     }
 
     @Override
@@ -87,12 +90,29 @@ public class EventListFragment extends InfoWrapperTextListFragment {
 
     @Override
     public InfoWrapper[] generateInfo() {
-        while (!serviceBound) ;
-        updateService.updateEventsSync();
+        String eventFeed = PreferenceHelper.getPreferences(getActivity()).getEventFeed();
+        if (eventFeed == null || eventFeed.length() == 0) {
+            EventInfoWrapper noFeed = new EventInfoWrapper();
+            noFeed.setName("Please download a Chapter Pack to access this feature.");
+            noFeed.setId(-1);
+            return new EventInfoWrapper[]{noFeed};
+        }
+        final long TIMEOUT = 10 * 1000;
+        long beginTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - beginTime < TIMEOUT) {
+            if (serviceBound) {
+                updateService.updateEventsSync();
+                break;
+            }
+        }
+        if (!serviceBound) {
+            Toast.makeText(getActivity(), "Could not connect to server in time.", Toast.LENGTH_SHORT);
+            Log.d("EventListFrag", "Service not bound in time");
+        }
         handler = new EventDatabaseHandler(getActivity());
         //TODO: Store event dates as MYSQL Date objects to allow for WHERE clause filtering
         EventInfoWrapper[] allEvents = handler.getEvents(null, null);
-        DateFormat df = new SimpleDateFormat("E, M d");
+        DateFormat df = new SimpleDateFormat("EEEE, MMMM dd yyyy");
         Date current = Calendar.getInstance().getTime();
         ArrayList futureEvents = new ArrayList();
         for (EventInfoWrapper wrapper : allEvents) {
@@ -103,6 +123,12 @@ public class EventListFragment extends InfoWrapperTextListFragment {
                 e.printStackTrace();
                 futureEvents.add(wrapper); //Just in case someone's date format is off
             }
+        }
+        if (futureEvents.isEmpty()) {
+            EventInfoWrapper noEvent = new EventInfoWrapper();
+            noEvent.setName("No events found.");
+            noEvent.setId(-1);
+            return new EventInfoWrapper[]{noEvent};
         }
         return (EventInfoWrapper[]) futureEvents.toArray(new EventInfoWrapper[futureEvents.size()]);
     }

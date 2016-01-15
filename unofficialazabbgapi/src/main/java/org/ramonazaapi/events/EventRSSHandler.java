@@ -8,6 +8,7 @@ import org.apache.http.params.CoreConnectionPNames;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Calendar;
 
 /**
  * Created by ilan on 9/8/15.
@@ -77,6 +78,13 @@ public class EventRSSHandler {
             currentEvent.setPlanner(splitFeed[7]);
             currentEvent.setMapsLocation(splitFeed[8]);
             currentEvent.setId(i);
+            String curDateString = currentEvent.getDate();
+            for (int ind = curDateString.length() - 4; ind < curDateString.length(); ind++) {
+                if (!Character.isDigit(curDateString.charAt(ind))) {
+                    currentEvent.setDate(curDateString + " " + Calendar.getInstance().get(Calendar.YEAR));
+                    break;
+                }
+            }
             events[i] = currentEvent;
         }
         return events;
